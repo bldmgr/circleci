@@ -202,7 +202,6 @@ func GetJobData(ci CI, jobId string, vsc string, namespace string, project strin
 		return ""
 	}
 
-	t = string(body) + "\n"
-
-	return t
+	fmt.Printf(string(body) + "\n")
+	return "done"
 }
