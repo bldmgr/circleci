@@ -140,8 +140,6 @@ func GetJobDetails(ci CI, jobId string, vsc string, namespace string, project st
 	if output == "json" {
 		fmt.Printf(string(body) + "\n")
 
-	} else {
-		fmt.Printf("%v -> %s \n", p.Number, p.Name)
 	}
 
 	return p

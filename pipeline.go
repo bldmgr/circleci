@@ -93,7 +93,9 @@ func GetPipelineById(ci CI, pipelineId string, output string) (items PipelineIte
 
 	if output == "json" {
 		fmt.Printf(string(body) + "\n")
-	} else {
+	}
+
+	if output == "status" {
 		fmt.Printf("Pipeline Id: %s -> %s \n", p.State, p.CreatedAt)
 		fmt.Printf("Pipeline Number: %d -> %s \n", p.Number, p.Vcs.Branch)
 	}
@@ -321,7 +323,6 @@ func GetPipelineConfig(ci CI, pipelineId string, output string) (prametersItems 
 								value = fmt.Sprint(viper.Get(title + "." + group + ".default"))
 								ptype := fmt.Sprint(viper.Get(title + "." + group + ".type"))
 								penum := fmt.Sprint(viper.Get(title + "." + group + ".enum"))
-								fmt.Println(group, value, ptype, penum)
 								w = append(w, Prameters{
 									PipelineID: pipelineId,
 									Parameter:  group,
