@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/spf13/viper"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -182,7 +183,7 @@ func check(e error) {
 	}
 }
 
-func GetPipelineConfig(ci CI, pipelineId string, output string) (prametersItems []Prameters, jobItems []Job) {
+func GetPipelineConfig(ci CI, pipelineId string, output string) (prametersItems []Prameters, jobItems []Job, jsonItems string) {
 	var p PipelineConfig
 	var w []Prameters
 	var j []Job
@@ -339,7 +340,14 @@ func GetPipelineConfig(ci CI, pipelineId string, output string) (prametersItems 
 		}
 	}
 
-	return w, j
+	jsonOut, err := json.Marshal(w)
+	if err != nil {
+		log.Println(err)
+	}
+	fullJson := string(jsonOut)
+
+	return w, j, fullJson
+
 }
 
 func countLeadingSpaces(line string) int {
