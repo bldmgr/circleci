@@ -193,7 +193,7 @@ func GetTestMetadata(ci CI, jobId string, vsc string, namespace string, project 
 	return items
 }
 
-func GetJobData(ci CI, jobId string, vsc string, namespace string, project string, step string) (t string) {
+func GetJobData(ci CI, jobId string, vsc string, namespace string, project string, step string, output string) (t string) {
 
 	url := fmt.Sprintf(restGetJobData, vsc, namespace, project, jobId, step)
 
@@ -202,6 +202,10 @@ func GetJobData(ci CI, jobId string, vsc string, namespace string, project strin
 		return ""
 	}
 
-	fmt.Printf(string(body) + "\n")
-	return "done"
+	if output == "data" {
+		fmt.Printf(string(body) + "\n")
+	}
+	output = string(body) + "\n"
+
+	return output
 }
