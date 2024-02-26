@@ -13,11 +13,14 @@ package main
 import (
 	"fmt"
 	"github.com/bldmgr/circleci"
+	setting "github.com/bldmgr/circleci/pkg/config"
 )
 
 func main() {
 
-	ci, err := circleci.New("host", "token", "project")
+	loadedConfig := setting.SetConfigYaml()
+
+	ci, err := circleci.New(loadedConfig.Host, loadedConfig.Token, loadedConfig.Project)
 	if err != nil {
 		panic(err)
 	}
