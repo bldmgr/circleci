@@ -324,12 +324,6 @@ func GetPipelineConfig(ci CI, pipelineId string, output string, workflowName str
 				}
 			}
 		}
-	} else if output == "web" {
-		circleci_config := []byte(p.Compiled)
-		viper.SetConfigType("yaml")
-		viper.ReadConfig(bytes.NewBuffer(circleci_config))
-
-		processJobs(ci, workflowName, jobnumber, projectname)
 	} else {
 
 		//TODO: attach_workspace
@@ -339,12 +333,6 @@ func GetPipelineConfig(ci CI, pipelineId string, output string, workflowName str
 		circleci_config := []byte(p.Source)
 		viper.SetConfigType("yaml")
 		viper.ReadConfig(bytes.NewBuffer(circleci_config))
-
-		//processWorkflows()
-		//processJobs()
-
-		//	processSubViper("jobs", ".parameters")
-		//processSubViper("orbs", "")
 
 		group := ""
 		title := ""
