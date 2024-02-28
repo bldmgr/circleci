@@ -242,6 +242,12 @@ func GetPipelineConfig(ci CI, pipelineId string, output string) (prametersItems 
 	//output = "file"
 	if output == "json" {
 		fmt.Printf(string(body) + "\n")
+	} else if output == "source" {
+		circleci_source := p.Source
+		fmt.Printf(circleci_source)
+	} else if output == "compiled" {
+		circleci_compiled := p.Compiled
+		fmt.Printf(circleci_compiled)
 	} else if output == "file" {
 		title := ""
 		jobs := ""
