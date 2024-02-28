@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/viper"
 	"log"
 	"net/http"
 	"os"
@@ -13,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 const (
@@ -224,7 +225,7 @@ func formatProjectSlug(projectSlug string) (project string, vcs string, namespac
 	return project, vcs, namespace
 }
 
-func GetPipelineConfig(ci CI, pipelineId string, output string, workflowName string, jobnumber int, projectname string) (prametersItems []Prameters, jobItems []Job, jsonItems string) {
+func GetPipelineConfig(ci CI, pipelineId string, output string) (prametersItems []Prameters, jobItems []Job, jsonItems string) {
 	var p PipelineConfig
 	var w []Prameters
 	var j []Job
@@ -325,11 +326,6 @@ func GetPipelineConfig(ci CI, pipelineId string, output string, workflowName str
 			}
 		}
 	} else {
-
-		//TODO: attach_workspace
-		//TODO: persist_to_workspace
-		//TODO: nexus/download
-
 		circleci_config := []byte(p.Source)
 		viper.SetConfigType("yaml")
 		viper.ReadConfig(bytes.NewBuffer(circleci_config))
@@ -347,6 +343,7 @@ func GetPipelineConfig(ci CI, pipelineId string, output string, workflowName str
 			}
 			if s == "" {
 				group = ""
+				title = ""
 			} else {
 				firstCharacter := s[0:1]
 				if firstCharacter != "#" {
@@ -354,23 +351,6 @@ func GetPipelineConfig(ci CI, pipelineId string, output string, workflowName str
 						title = s
 					} else {
 						if countLeadingSpaces(s) == 2 {
-							if title == "orbs" {
-								orbJob := strings.TrimSpace(s)
-								orbVersion := fmt.Sprint(viper.Get(title + "." + orbJob))
-								fmt.Println(orbJob + ": " + orbVersion)
-							}
-
-							if title == "workflows" {
-
-								workflows := strings.TrimSpace(s)
-								fmt.Println(workflows)
-								//workflows_jobs := fmt.Sprint(viper.Get(title + "." + workflows + ".jobs"))
-								unknownMap := fmt.Sprint(viper.GetString("workflows.build-and-test-nostd-apde.jobs"))
-
-								fmt.Println(string(unknownMap))
-
-							}
-
 							if title == "jobs" {
 								job := strings.TrimSpace(s)
 								machine := fmt.Sprint(viper.Get(title + "." + job + ".machine"))
@@ -382,30 +362,20 @@ func GetPipelineConfig(ci CI, pipelineId string, output string, workflowName str
 									ResourceClass: resource_class,
 								})
 							}
-
-							if title == "parameters" {
-								if strings.Contains(s, "#") == false {
-									group = strings.TrimSpace(s)
-									value = fmt.Sprint(viper.Get(title + "." + group + ".default"))
-									ptype := fmt.Sprint(viper.Get(title + "." + group + ".type"))
-									penum := fmt.Sprint(viper.Get(title + "." + group + ".enum"))
-									w = append(w, Prameters{
-										PipelineID: pipelineId,
-										Parameter:  group,
-										Default:    value,
-										Type:       ptype,
-										Enum:       penum,
-									})
-								}
-							}
-
 						}
-						if countLeadingSpaces(s) == 4 {
-							if title == "workflows" {
-								if strings.Contains(s, "#") == false {
-									group = strings.TrimSpace(s)
-
-								}
+						if countLeadingSpaces(s) == 2 {
+							if title == "parameters" {
+								group = strings.TrimSpace(s)
+								value = fmt.Sprint(viper.Get(title + "." + group + ".default"))
+								ptype := fmt.Sprint(viper.Get(title + "." + group + ".type"))
+								penum := fmt.Sprint(viper.Get(title + "." + group + ".enum"))
+								w = append(w, Prameters{
+									PipelineID: pipelineId,
+									Parameter:  group,
+									Default:    value,
+									Type:       ptype,
+									Enum:       penum,
+								})
 							}
 						}
 					}
