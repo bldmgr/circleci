@@ -5,14 +5,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/viper"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 const (
@@ -187,44 +187,7 @@ func check(e error) {
 	}
 }
 
-func GetConfigWithWorkflow(ci CI, jobs []WorkflowItem, workflows []PipelineWorkflows, j int, w int, output string) (returnData []JobDataSteps) {
-	var p PipelineConfig
-
-	url := fmt.Sprintf(restPipelineConfig, workflows[w].PipelineID)
-	body, resp, err := ci.Get(url)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		return
-	}
-	err = json.Unmarshal(body, &p)
-	if err != nil {
-		fmt.Printf("could not read items from response: %v", err)
-	}
-	if output == "json" {
-		fmt.Printf(string(body) + "\n")
-	}
-
-	circleci_config := []byte(p.Compiled)
-	viper.SetConfigType("yaml")
-	viper.ReadConfig(bytes.NewBuffer(circleci_config))
-
-	projectname, _, _ := formatProjectSlug(workflows[w].ProjectSlug)
-	log.Println(jobs[j].JobNumber)
-	returnDataSet := processJobs(ci, jobs[j].Name, jobs[j].JobNumber, projectname)
-
-	return returnDataSet
-}
-
-func formatProjectSlug(projectSlug string) (project string, vcs string, namespace string) {
-	// Split vcs/namespace/project
-	_, project = filepath.Split(projectSlug)
-	s := strings.TrimRight(projectSlug, "/")
-	vcs, namespace = filepath.Split(s)
-	s = strings.TrimRight(vcs, "/")
-
-	return project, vcs, namespace
-}
-
-func GetPipelineConfig(ci CI, pipelineId string, output string, workflowName string, jobnumber int, projectname string) (prametersItems []Prameters, jobItems []Job, jsonItems string) {
+func GetPipelineConfig(ci CI, pipelineId string, output string) (prametersItems []Prameters, jobItems []Job, jsonItems string) {
 	var p PipelineConfig
 	var w []Prameters
 	var j []Job
@@ -241,12 +204,6 @@ func GetPipelineConfig(ci CI, pipelineId string, output string, workflowName str
 	//output = "file"
 	if output == "json" {
 		fmt.Printf(string(body) + "\n")
-	} else if output == "source" {
-		circleci_source := p.Source
-		fmt.Printf(circleci_source)
-	} else if output == "compiled" {
-		circleci_compiled := p.Compiled
-		fmt.Printf(circleci_compiled)
 	} else if output == "file" {
 		title := ""
 		jobs := ""
@@ -325,11 +282,6 @@ func GetPipelineConfig(ci CI, pipelineId string, output string, workflowName str
 			}
 		}
 	} else {
-
-		//TODO: attach_workspace
-		//TODO: persist_to_workspace
-		//TODO: nexus/download
-
 		circleci_config := []byte(p.Source)
 		viper.SetConfigType("yaml")
 		viper.ReadConfig(bytes.NewBuffer(circleci_config))
@@ -347,6 +299,7 @@ func GetPipelineConfig(ci CI, pipelineId string, output string, workflowName str
 			}
 			if s == "" {
 				group = ""
+				title = ""
 			} else {
 				firstCharacter := s[0:1]
 				if firstCharacter != "#" {
@@ -354,23 +307,6 @@ func GetPipelineConfig(ci CI, pipelineId string, output string, workflowName str
 						title = s
 					} else {
 						if countLeadingSpaces(s) == 2 {
-							if title == "orbs" {
-								orbJob := strings.TrimSpace(s)
-								orbVersion := fmt.Sprint(viper.Get(title + "." + orbJob))
-								fmt.Println(orbJob + ": " + orbVersion)
-							}
-
-							if title == "workflows" {
-
-								workflows := strings.TrimSpace(s)
-								fmt.Println(workflows)
-								//workflows_jobs := fmt.Sprint(viper.Get(title + "." + workflows + ".jobs"))
-								unknownMap := fmt.Sprint(viper.GetString("workflows.build-and-test-nostd-apde.jobs"))
-
-								fmt.Println(string(unknownMap))
-
-							}
-
 							if title == "jobs" {
 								job := strings.TrimSpace(s)
 								machine := fmt.Sprint(viper.Get(title + "." + job + ".machine"))
@@ -382,30 +318,20 @@ func GetPipelineConfig(ci CI, pipelineId string, output string, workflowName str
 									ResourceClass: resource_class,
 								})
 							}
-
-							if title == "parameters" {
-								if strings.Contains(s, "#") == false {
-									group = strings.TrimSpace(s)
-									value = fmt.Sprint(viper.Get(title + "." + group + ".default"))
-									ptype := fmt.Sprint(viper.Get(title + "." + group + ".type"))
-									penum := fmt.Sprint(viper.Get(title + "." + group + ".enum"))
-									w = append(w, Prameters{
-										PipelineID: pipelineId,
-										Parameter:  group,
-										Default:    value,
-										Type:       ptype,
-										Enum:       penum,
-									})
-								}
-							}
-
 						}
-						if countLeadingSpaces(s) == 4 {
-							if title == "workflows" {
-								if strings.Contains(s, "#") == false {
-									group = strings.TrimSpace(s)
-
-								}
+						if countLeadingSpaces(s) == 2 {
+							if title == "parameters" {
+								group = strings.TrimSpace(s)
+								value = fmt.Sprint(viper.Get(title + "." + group + ".default"))
+								ptype := fmt.Sprint(viper.Get(title + "." + group + ".type"))
+								penum := fmt.Sprint(viper.Get(title + "." + group + ".enum"))
+								w = append(w, Prameters{
+									PipelineID: pipelineId,
+									Parameter:  group,
+									Default:    value,
+									Type:       ptype,
+									Enum:       penum,
+								})
 							}
 						}
 					}
