@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -185,6 +186,43 @@ func check(e error) {
 	if e != nil {
 		panic(e)
 	}
+}
+
+func GetConfigWithWorkflow(ci CI, jobs []WorkflowItem, workflows []PipelineWorkflows, j int, w int, output string) (returnData []JobDataSteps) {
+	var p PipelineConfig
+
+	url := fmt.Sprintf(restPipelineConfig, workflows[w].PipelineID)
+	body, resp, err := ci.Get(url)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return
+	}
+	err = json.Unmarshal(body, &p)
+	if err != nil {
+		fmt.Printf("could not read items from response: %v", err)
+	}
+	if output == "json" {
+		fmt.Printf(string(body) + "\n")
+	}
+
+	circleci_config := []byte(p.Compiled)
+	viper.SetConfigType("yaml")
+	viper.ReadConfig(bytes.NewBuffer(circleci_config))
+
+	projectname, _, _ := formatProjectSlug(workflows[w].ProjectSlug)
+	log.Println(jobs[j].JobNumber)
+	returnDataSet := processJobs(ci, jobs[j].Name, jobs[j].JobNumber, projectname)
+
+	return returnDataSet
+}
+
+func formatProjectSlug(projectSlug string) (project string, vcs string, namespace string) {
+	// Split vcs/namespace/project
+	_, project = filepath.Split(projectSlug)
+	s := strings.TrimRight(projectSlug, "/")
+	vcs, namespace = filepath.Split(s)
+	s = strings.TrimRight(vcs, "/")
+
+	return project, vcs, namespace
 }
 
 func GetPipelineConfig(ci CI, pipelineId string, output string) (prametersItems []Prameters, jobItems []Job, jsonItems string) {
