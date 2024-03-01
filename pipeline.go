@@ -188,7 +188,7 @@ func check(e error) {
 	}
 }
 
-func GetConfigWithWorkflow(ci CI, jobs []WorkflowItem, workflows []PipelineWorkflows, j int, w int, output string) (returnData []JobDataSteps) {
+func GetConfigWithWorkflow(ci CI, jobs []WorkflowItem, workflows []PipelineWorkflows, j int, w int, output string) (returnData []JobDataSteps, returnEnvConfig []JobDataEnvironment) {
 	var p PipelineConfig
 
 	url := fmt.Sprintf(restPipelineConfig, workflows[w].PipelineID)
@@ -209,10 +209,9 @@ func GetConfigWithWorkflow(ci CI, jobs []WorkflowItem, workflows []PipelineWorkf
 	viper.ReadConfig(bytes.NewBuffer(circleci_config))
 
 	projectname, _, _ := formatProjectSlug(workflows[w].ProjectSlug)
-	log.Println(jobs[j].JobNumber)
-	returnDataSet := processJobs(ci, jobs[j].Name, jobs[j].JobNumber, projectname)
+	returnDataSet, returnEnvConfig := processJobs(ci, jobs[j].Name, jobs[j].JobNumber, projectname, output)
 
-	return returnDataSet
+	return returnDataSet, returnEnvConfig
 }
 
 func formatProjectSlug(projectSlug string) (project string, vcs string, namespace string) {
@@ -531,8 +530,8 @@ func processWorkflows(jobName string) {
 	fmt.Println("*****************************")
 }
 
-func processJobs(ci CI, workflowName string, jobNumber int, projectName string) (Steps []JobDataSteps) {
-
+func processJobs(ci CI, workflowName string, jobNumber int, projectName string, output string) (Steps []JobDataSteps, Env []JobDataEnvironment) {
+	ghSha := ""
 	getSteps := func(jobsSteps []interface{}, sum int) (Steps []JobDataSteps) {
 		dataSteps := make([]JobDataSteps, 0)
 
@@ -549,7 +548,9 @@ func processJobs(ci CI, workflowName string, jobNumber int, projectName string) 
 			case string:
 				data_name = v
 				if v == "checkout" {
-					data = string(GetJobData(ci, strconv.Itoa(jobNumber), "gh", "Cloud", projectName, strconv.Itoa(sum), ""))
+					if output == "data" {
+						data = string(GetJobData(ci, strconv.Itoa(jobNumber), "gh", "Cloud", projectName, strconv.Itoa(sum), ""))
+					}
 				}
 			default:
 				stepsMap := steps.(map[string]interface{})
@@ -562,7 +563,9 @@ func processJobs(ci CI, workflowName string, jobNumber int, projectName string) 
 					switch v := stepsValue.(type) {
 					case string:
 						data_name = v
-						data = string(GetJobData(ci, strconv.Itoa(jobNumber), "gh", "Cloud", projectName, strconv.Itoa(sum), ""))
+						if output == "data" {
+							data = string(GetJobData(ci, strconv.Itoa(jobNumber), "gh", "Cloud", projectName, strconv.Itoa(sum), ""))
+						}
 					default:
 						jobDetails := stepsValue.(map[string]interface{})
 						for key, value := range jobDetails {
@@ -580,7 +583,9 @@ func processJobs(ci CI, workflowName string, jobNumber int, projectName string) 
 							}
 						}
 					}
-					data = string(GetJobData(ci, strconv.Itoa(jobNumber), "gh", "Cloud", projectName, strconv.Itoa(sum), ""))
+					if output == "data" {
+						data = string(GetJobData(ci, strconv.Itoa(jobNumber), "gh", "Cloud", projectName, strconv.Itoa(sum), ""))
+					}
 				}
 			}
 			dataSteps = append(dataSteps, JobDataSteps{
@@ -598,7 +603,10 @@ func processJobs(ci CI, workflowName string, jobNumber int, projectName string) 
 	}
 
 	dataSteps := make([]JobDataSteps, 0)
+	dataEnvironment := make([]JobDataEnvironment, 0)
 	data := string(GetJobData(ci, strconv.Itoa(jobNumber), "gh", "Cloud", projectName, "0", ""))
+	jobHost := string(data) + "\n"
+	outAgent, outRunner, outVm, outImage, outVolume := parseVariables(jobHost, "Build-agent version ", "Launch-agent version ", "Using volume:", "default", "  using image ")
 	dataSteps = append(dataSteps, JobDataSteps{
 		ID:      "0",
 		Name:    "Spin up environment",
@@ -608,7 +616,9 @@ func processJobs(ci CI, workflowName string, jobNumber int, projectName string) 
 		When:    "",
 		Output:  data,
 	})
+
 	data = string(GetJobData(ci, strconv.Itoa(jobNumber), "gh", "Cloud", projectName, "99", ""))
+	jobEnvironment := string(data) + "\n"
 	dataSteps = append(dataSteps, JobDataSteps{
 		ID:      "99",
 		Name:    "Preparing environment variables",
@@ -617,6 +627,23 @@ func processJobs(ci CI, workflowName string, jobNumber int, projectName string) 
 		Path:    "",
 		When:    "",
 		Output:  data,
+	})
+	dataReader := strings.NewReader(jobEnvironment)
+	scanner := bufio.NewScanner(dataReader)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "CIRCLE_SHA1") == true {
+			ghSha = strings.Replace(line, "  CIRCLE_SHA1=", "", -1)
+		}
+	}
+
+	dataEnvironment = append(dataEnvironment, JobDataEnvironment{
+		Sha:        ghSha,
+		HostAgent:  outAgent,
+		HostImage:  outImage,
+		HostVM:     outVm,
+		HostVolume: outVolume,
+		HostRunner: outRunner,
 	})
 
 	v := viper.Sub("jobs")
@@ -643,7 +670,50 @@ func processJobs(ci CI, workflowName string, jobNumber int, projectName string) 
 		}
 	}
 
-	return dataSteps
+	return dataSteps, dataEnvironment
+}
+
+func removeText(data string, start string, end string, number int) (out string) {
+	format := strings.Replace(data, start, "", number)
+	out = strings.Replace(format, end, "", number)
+	return out
+}
+
+func parseVariables(data string, agent string, runner string, volume string, vm string, image string) (outAgent string, outRunner string, outVm string, outImage string, outVolume string) {
+	theReader := strings.NewReader(data)
+	scanner := bufio.NewScanner(theReader)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, agent) == true {
+			outAgent = strings.Replace(line, agent, "", -1)
+		}
+		if strings.Contains(line, runner) == true {
+			outRunner = strings.Replace(line, runner, "", -1)
+		}
+		if strings.Contains(line, vm) == true {
+			outVm = removeText(line, "VM '", "' has been created", -1)
+		}
+		if strings.Contains(line, volume) == true {
+			outVolume = strings.Replace(line, volume, "", -1)
+		}
+		if strings.Contains(line, image) == true {
+			outImage = strings.Replace(line, image, "", -1)
+		}
+	}
+
+	return outAgent, outRunner, outVm, outImage, outVolume
+}
+
+type JobDataEnvironment struct {
+	Sha            string   `json:"sha"`
+	HostType       string   `json:"host_type"`
+	HostClass      string   `json:"host_class"`
+	HostImage      string   `json:"host_image"`
+	HostVM         string   `json:"host_vm"`
+	HostVolume     string   `json:"host_volume"`
+	HostAgent      string   `json:"host_agent"`
+	HostRunner     string   `json:"host_runner"`
+	ExternalInputs []string `json:"external_inputs"`
 }
 
 type JobDataSteps struct {

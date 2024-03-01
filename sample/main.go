@@ -57,9 +57,10 @@ func getWorkflow(ci circleci.CI, pipeline []circleci.PipelineItem) {
 	alldata := make([]circleci.AllData, 0)
 	workflowpipeline := make([]circleci.WorkflowPipeline, 0)
 	var returnDataSet []circleci.JobDataSteps
+	var returnEnvConfig []circleci.JobDataEnvironment
 	//for p := range pipeline {
 	//pipelineId := pipeline[p].ID
-	pipelineId := "0ae71535-f159-4486-ba08-f478b6394d77"
+	pipelineId := "cd622c4d-c163-4b3f-bb5b-5cb993204788"
 	fmt.Printf("Pipeline Id: %s \n", pipelineId)
 
 	workflows := circleci.GetPipelineWorkflows(ci, pipelineId, "none")
@@ -71,7 +72,8 @@ func getWorkflow(ci circleci.CI, pipeline []circleci.PipelineItem) {
 		for j := range jobs {
 			fmt.Printf("-->> Checking %v %s status: %s \n", jobs[j].JobNumber, jobs[j].Name, jobs[j].Status)
 			// job loop
-			returnDataSet = circleci.GetConfigWithWorkflow(ci, jobs, workflows, j, w, "")
+			returnDataSet, returnEnvConfig = circleci.GetConfigWithWorkflow(ci, jobs, workflows, j, w, "data")
+			log.Printf("Config %v", returnEnvConfig[0].Sha)
 			workflowpipeline = append(workflowpipeline, circleci.WorkflowPipeline{
 				JobNumber:    jobs[j].JobNumber,
 				Id:           jobs[j].Id,
