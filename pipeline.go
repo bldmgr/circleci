@@ -188,7 +188,7 @@ func check(e error) {
 	}
 }
 
-func GetConfigWithWorkflow(ci CI, jobs []WorkflowItem, workflows []PipelineWorkflows, j int, w int, output string) (returnData []JobDataSteps, returnEnvConfig []JobDataEnvironment) {
+func GetConfigWithWorkflow(ci CI, jobs []WorkflowItem, workflows []PipelineWorkflows, j int, w int, output string) (returnData []JobDataSteps, returnEnvConfig []JobDataEnvironment, orbs []ViperSub, parameters []ViperSub) {
 	var p PipelineConfig
 
 	url := fmt.Sprintf(restPipelineConfig, workflows[w].PipelineID)
@@ -204,14 +204,15 @@ func GetConfigWithWorkflow(ci CI, jobs []WorkflowItem, workflows []PipelineWorkf
 		fmt.Printf(string(body) + "\n")
 	}
 
-	circleci_config := []byte(p.Compiled)
-	viper.SetConfigType("yaml")
-	viper.ReadConfig(bytes.NewBuffer(circleci_config))
+	circleciSource := []byte(p.Source)
+	configCompiled := []byte(p.Compiled)
+	orbs = processParms(circleciSource, "orbs")
+	parameters = processParms(circleciSource, "parameters")
 
 	projectname, _, _ := formatProjectSlug(workflows[w].ProjectSlug)
-	returnDataSet, returnEnvConfig := processJobs(ci, jobs[j].Name, jobs[j].JobNumber, projectname, output)
+	returnDataSet, returnEnvConfig := processJobs(ci, jobs[j].Name, jobs[j].JobNumber, projectname, output, configCompiled)
 
-	return returnDataSet, returnEnvConfig
+	return returnDataSet, returnEnvConfig, orbs, parameters
 }
 
 func formatProjectSlug(projectSlug string) (project string, vcs string, namespace string) {
@@ -530,7 +531,43 @@ func processWorkflows(jobName string) {
 	fmt.Println("*****************************")
 }
 
-func processJobs(ci CI, workflowName string, jobNumber int, projectName string, output string) (Steps []JobDataSteps, Env []JobDataEnvironment) {
+func processParms(circleciConfig []byte, viperSub string) []ViperSub {
+	viperItems := make([]ViperSub, 0)
+	viper.SetConfigType("yaml")
+	viper.ReadConfig(bytes.NewBuffer(circleciConfig))
+	v := viper.Sub(viperSub)
+	if v == nil { // Sub returns nil if the key cannot be found
+		panic("cache configuration not found")
+	}
+	keys := v.AllKeys()
+	for i := 0; i < len(keys); i++ {
+
+		if viperSub == "parameters" {
+
+			if strings.Contains(keys[i], ".type") {
+				nameKey := strings.FieldsFunc(keys[i], func(r rune) bool {
+					return r == '.'
+				})
+				viperItems = append(viperItems, ViperSub{
+					Name: nameKey[0],
+					Type: viperSub,
+				})
+			}
+		} else {
+			viperItems = append(viperItems, ViperSub{
+				Name: keys[i],
+				Type: viperSub,
+			})
+		}
+	}
+
+	return viperItems
+}
+
+func processJobs(ci CI, workflowName string, jobNumber int, projectName string, output string, configCompiled []byte) (Steps []JobDataSteps, Env []JobDataEnvironment) {
+	viper.SetConfigType("yaml")
+	viper.ReadConfig(bytes.NewBuffer(configCompiled))
+
 	ghSha := ""
 	getSteps := func(jobsSteps []interface{}, sum int) (Steps []JobDataSteps) {
 		dataSteps := make([]JobDataSteps, 0)
@@ -650,6 +687,7 @@ func processJobs(ci CI, workflowName string, jobNumber int, projectName string, 
 	if v == nil { // Sub returns nil if the key cannot be found
 		panic("jobs cache configuration not found")
 	}
+
 	keys := v.AllKeys()
 	for i := 0; i < len(keys); i++ {
 		sum := 100
@@ -714,6 +752,8 @@ type JobDataEnvironment struct {
 	HostAgent      string   `json:"host_agent"`
 	HostRunner     string   `json:"host_runner"`
 	ExternalInputs []string `json:"external_inputs"`
+	Orbs           []string `json:"orbs"`
+	Parameters     []string `json:"parameters"`
 }
 
 type JobDataSteps struct {
@@ -750,4 +790,9 @@ type AllData struct {
 	StoppedAt        time.Time          `json:"stopped_at"`
 	Tag              string             `json:"tag,omitempty"`
 	WorkflowPipeline []WorkflowPipeline `json:"workflow_pipeline"`
+}
+
+type ViperSub struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
 }
