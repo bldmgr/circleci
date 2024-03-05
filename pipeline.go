@@ -553,6 +553,12 @@ func processParms(circleciConfig []byte, viperSub string) []ViperSub {
 					Type: viperSub,
 				})
 			}
+		} else if viperSub == "orbs" {
+			var orbVersion = v.Get(keys[i]).(string)
+			viperItems = append(viperItems, ViperSub{
+				Name: keys[i],
+				Type: orbVersion,
+			})
 		} else {
 			viperItems = append(viperItems, ViperSub{
 				Name: keys[i],
