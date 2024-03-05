@@ -537,7 +537,7 @@ func processParms(circleciConfig []byte, viperSub string) []ViperSub {
 	viper.ReadConfig(bytes.NewBuffer(circleciConfig))
 	v := viper.Sub(viperSub)
 	if v == nil { // Sub returns nil if the key cannot be found
-		panic("cache configuration not found")
+		return nil
 	}
 	keys := v.AllKeys()
 	for i := 0; i < len(keys); i++ {
