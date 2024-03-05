@@ -545,12 +545,13 @@ func processParms(circleciConfig []byte, viperSub string) []ViperSub {
 		if viperSub == "parameters" {
 
 			if strings.Contains(keys[i], ".type") {
+				var paramType = v.Get(keys[i]).(string)
 				nameKey := strings.FieldsFunc(keys[i], func(r rune) bool {
 					return r == '.'
 				})
 				viperItems = append(viperItems, ViperSub{
 					Name: nameKey[0],
-					Type: viperSub,
+					Type: paramType,
 				})
 			}
 		} else if viperSub == "orbs" {
