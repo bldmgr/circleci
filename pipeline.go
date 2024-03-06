@@ -217,10 +217,10 @@ func GetConfigWithWorkflow(ci CI, jobs []WorkflowItem, workflows []PipelineWorkf
 
 func formatProjectSlug(projectSlug string) (project string, vcs string, namespace string) {
 	// Split vcs/namespace/project
-	_, project = filepath.Split(projectSlug)
-	s := strings.TrimRight(projectSlug, "/")
-	vcs, namespace = filepath.Split(s)
-	s = strings.TrimRight(vcs, "/")
+	out, project := filepath.Split(projectSlug)
+	s := strings.TrimRight(out, "/")
+	x, namespace := filepath.Split(s)
+	vcs = strings.TrimRight(x, "/")
 
 	return project, vcs, namespace
 }
