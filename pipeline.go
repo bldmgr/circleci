@@ -209,8 +209,8 @@ func GetConfigWithWorkflow(ci CI, jobs []WorkflowItem, workflows []PipelineWorkf
 	orbs = processParms(circleciSource, "orbs")
 	parameters = processParms(circleciSource, "parameters")
 
-	projectname, _, _ := formatProjectSlug(workflows[w].ProjectSlug)
-	returnDataSet, returnEnvConfig := processJobs(ci, jobs[j].Name, jobs[j].JobNumber, projectname, output, configCompiled)
+	project, vcs, namespace := formatProjectSlug(workflows[w].ProjectSlug)
+	returnDataSet, returnEnvConfig := processJobs(ci, jobs[j].Name, jobs[j].JobNumber, project, namespace, vcs, output, configCompiled)
 
 	return returnDataSet, returnEnvConfig, orbs, parameters
 }
@@ -571,7 +571,7 @@ func processParms(circleciConfig []byte, viperSub string) []ViperSub {
 	return viperItems
 }
 
-func processJobs(ci CI, workflowName string, jobNumber int, projectName string, output string, configCompiled []byte) (Steps []JobDataSteps, Env []JobDataEnvironment) {
+func processJobs(ci CI, workflowName string, jobNumber int, projectName string, namespace string, vsc string, output string, configCompiled []byte) (Steps []JobDataSteps, Env []JobDataEnvironment) {
 	viper.SetConfigType("yaml")
 	viper.ReadConfig(bytes.NewBuffer(configCompiled))
 
@@ -593,7 +593,7 @@ func processJobs(ci CI, workflowName string, jobNumber int, projectName string, 
 				data_name = v
 				if v == "checkout" {
 					if output == "data" {
-						data = string(GetJobData(ci, strconv.Itoa(jobNumber), "gh", "Cloud", projectName, strconv.Itoa(sum), ""))
+						data = string(GetJobData(ci, strconv.Itoa(jobNumber), vsc, namespace, projectName, strconv.Itoa(sum), ""))
 					}
 				}
 			default:
@@ -608,7 +608,7 @@ func processJobs(ci CI, workflowName string, jobNumber int, projectName string, 
 					case string:
 						data_name = v
 						if output == "data" {
-							data = string(GetJobData(ci, strconv.Itoa(jobNumber), "gh", "Cloud", projectName, strconv.Itoa(sum), ""))
+							data = string(GetJobData(ci, strconv.Itoa(jobNumber), vsc, namespace, projectName, strconv.Itoa(sum), ""))
 						}
 					default:
 						jobDetails := stepsValue.(map[string]interface{})
@@ -628,7 +628,7 @@ func processJobs(ci CI, workflowName string, jobNumber int, projectName string, 
 						}
 					}
 					if output == "data" {
-						data = string(GetJobData(ci, strconv.Itoa(jobNumber), "gh", "Cloud", projectName, strconv.Itoa(sum), ""))
+						data = string(GetJobData(ci, strconv.Itoa(jobNumber), vsc, namespace, projectName, strconv.Itoa(sum), ""))
 					}
 				}
 			}
@@ -648,7 +648,7 @@ func processJobs(ci CI, workflowName string, jobNumber int, projectName string, 
 
 	dataSteps := make([]JobDataSteps, 0)
 	dataEnvironment := make([]JobDataEnvironment, 0)
-	data := string(GetJobData(ci, strconv.Itoa(jobNumber), "gh", "Cloud", projectName, "0", ""))
+	data := string(GetJobData(ci, strconv.Itoa(jobNumber), vsc, namespace, projectName, "0", ""))
 	jobHost := string(data) + "\n"
 	outAgent, outRunner, outVm, outImage, outVolume := parseVariables(jobHost, "Build-agent version ", "Launch-agent version ", "Using volume:", "default", "  using image ")
 	dataSteps = append(dataSteps, JobDataSteps{
@@ -661,7 +661,7 @@ func processJobs(ci CI, workflowName string, jobNumber int, projectName string, 
 		Output:  data,
 	})
 
-	data = string(GetJobData(ci, strconv.Itoa(jobNumber), "gh", "Cloud", projectName, "99", ""))
+	data = string(GetJobData(ci, strconv.Itoa(jobNumber), vsc, namespace, projectName, "99", ""))
 	jobEnvironment := string(data) + "\n"
 	dataSteps = append(dataSteps, JobDataSteps{
 		ID:      "99",
