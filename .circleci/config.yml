@@ -1,0 +1,19 @@
+version: 2.1
+
+workflows:
+  windows:
+    jobs:
+      - win-test-02
+
+jobs:
+  win-test-02:
+    machine: true
+    resource_class: bldmgr/windows
+    shell: powershell.exe
+    steps:
+      - checkout
+      - run: pwd
+      - run: $Env:PATH -split ";"
+
+
+      
