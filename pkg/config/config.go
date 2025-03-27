@@ -33,7 +33,7 @@ func SetConfigYaml() *ConfigYaml {
 	if os.Getenv(hostEnvVar) == "" {
 		viper.SetConfigType("yaml")
 		viper.AddConfigPath(ciHome)
-		viper.SetConfigName("/old")
+		viper.SetConfigName("/ci")
 		err := viper.ReadInConfig()
 
 		if err != nil {

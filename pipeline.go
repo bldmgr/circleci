@@ -751,26 +751,25 @@ func processJobs(ci CI, workflowName string, jobNumber int, projectName string, 
 	})
 
 	v := viper.Sub("jobs")
-	if v == nil { // Sub returns nil if the key cannot be found
-		panic("jobs cache configuration not found")
-	}
+	if v != nil { // Sub returns nil if the key cannot be found
 
-	keys := v.AllKeys()
-	for i := 0; i < len(keys); i++ {
-		sum := 100
-		if strings.Contains(keys[i], fmt.Sprintf("%v.steps", workflowName)) {
-			var jobsSteps = v.Get(keys[i]).([]interface{})
-			items := getSteps(jobsSteps, sum)
-			for i := range items {
-				dataSteps = append(dataSteps, JobDataSteps{
-					ID:      items[i].ID,
-					Name:    items[i].Name,
-					Command: items[i].Command,
-					Key:     items[i].Key,
-					Path:    items[i].Path,
-					When:    items[i].When,
-					Output:  items[i].Output,
-				})
+		keys := v.AllKeys()
+		for i := 0; i < len(keys); i++ {
+			sum := 100
+			if strings.Contains(keys[i], fmt.Sprintf("%v.steps", workflowName)) {
+				var jobsSteps = v.Get(keys[i]).([]interface{})
+				items := getSteps(jobsSteps, sum)
+				for i := range items {
+					dataSteps = append(dataSteps, JobDataSteps{
+						ID:      items[i].ID,
+						Name:    items[i].Name,
+						Command: items[i].Command,
+						Key:     items[i].Key,
+						Path:    items[i].Path,
+						When:    items[i].When,
+						Output:  items[i].Output,
+					})
+				}
 			}
 		}
 	}

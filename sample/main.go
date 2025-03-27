@@ -65,7 +65,7 @@ func main() {
 	status := circleci.Me(ci)
 	fmt.Printf("Connection to %s was successful -> %t \n", loadedConfig.Host, status)
 	createFile("test.json")
-	w := circleci.GetPipeline(ci, "Cloud", "json", 2)
+	w := circleci.GetPipeline(ci, "bldmgr", "json", 2)
 	testdate := "2024-06-20T17:42:50.528Z"
 	formattedDate, err := time.Parse(time.RFC3339, testdate)
 	fmt.Println(formattedDate)
