@@ -15,6 +15,7 @@ const (
 	tokenEnvVar      = "CIRCLE_TOKEN"
 	projectEnvVar    = "CIRCLE_PROJECT"
 	pipelineIdEnvVar = "CIRCLE_PIPELINEID"
+	redisEnvVar      = "REDIS_HOST"
 )
 
 type ConfigYaml struct {
@@ -23,6 +24,7 @@ type ConfigYaml struct {
 	Project    string
 	PipelineID string
 	Type       string
+	Redis      string
 }
 
 func SetConfigYaml() *ConfigYaml {
@@ -48,8 +50,9 @@ func SetConfigYaml() *ConfigYaml {
 			Host:       fmt.Sprintf("%v", viper.Get("circle_hostname")),
 			Project:    fmt.Sprintf("%v", viper.Get("circle_project")),
 			Token:      strings.TrimSpace(LetsDecrypt(fmt.Sprintf("%v", viper.Get("circle_token")))),
-			PipelineID: fmt.Sprintf("%v", viper.Get("circle_pipelineId")),
+			PipelineID: fmt.Sprintf("%v", viper.Get("pipelineId")),
 			Type:       fmt.Sprintf("%v", "yamlVar"),
+			Redis:      fmt.Sprintf("%v", viper.Get("_redis_host")),
 		}
 	} else {
 		return &ConfigYaml{
@@ -58,6 +61,7 @@ func SetConfigYaml() *ConfigYaml {
 			Project:    os.Getenv(projectEnvVar),
 			PipelineID: os.Getenv(pipelineIdEnvVar),
 			Type:       fmt.Sprintf("%v", "osEnvVar"),
+			Redis:      strings.TrimSpace(os.Getenv(redisEnvVar)),
 		}
 	}
 }
