@@ -7,6 +7,8 @@ import (
 	setting "github.com/bldmgr/circleci/pkg/config"
 	"log"
 	"os"
+	"strconv"
+	"time"
 )
 
 func createFile(filename string) {
@@ -37,6 +39,20 @@ func appendToFile(line string, filename string) {
 	}
 }
 
+var countryTz = map[string]string{
+	"Hungary": "Europe/Budapest",
+	"Egypt":   "Africa/Cairo",
+	"Canada":  "Canada/Toronto",
+}
+
+func timeIn(name string) time.Time {
+	loc, err := time.LoadLocation(countryTz[name])
+	if err != nil {
+		panic(err)
+	}
+	return time.Now().In(loc)
+}
+
 func main() {
 
 	loadedConfig := setting.SetConfigYaml()
@@ -49,7 +65,14 @@ func main() {
 	status := circleci.Me(ci)
 	fmt.Printf("Connection to %s was successful -> %t \n", loadedConfig.Host, status)
 	createFile("test.json")
-	w := circleci.GetPipeline(ci, "bldmgr", "web", 1)
+	w := circleci.GetPipeline(ci, "Cloud", "json", 2)
+	testdate := "2024-06-20T17:42:50.528Z"
+	formattedDate, err := time.Parse(time.RFC3339, testdate)
+	fmt.Println(formattedDate)
+	utc := time.Now().UTC().Format("15:04")
+	hun := timeIn("Hungary").Format("15:04")
+	eg := timeIn("Ottawa").Format("15:04")
+	fmt.Println(utc, hun, eg)
 	getWorkflow(ci, w)
 }
 
@@ -62,16 +85,20 @@ func getWorkflow(ci circleci.CI, pipeline []circleci.PipelineItem) {
 	var parameters []circleci.ViperSub
 	//for p := range pipeline {
 	//	pipelineId := pipeline[p].ID
-	pipelineId := "13aa1fc1-adde-469c-be61-619047b2782e"
+	//pipelineId := "13aa1fc1-adde-469c-be61-619047b2782e" // tangerine
+	pipelineId := "aae2b1ef-e7d7-46e7-9a8e-71effdb17af7"
 	fmt.Printf("Pipeline Id: %s \n", pipelineId)
 
 	workflows := circleci.GetPipelineWorkflows(ci, pipelineId, "none")
 	for w := range workflows {
 		//truncated := truncate.Truncator(payload[i].Vcs.Revision, 9, truncate.CutStrategy{})
-
+		testWorkflowId := "ff0f7a34-b837-4b21-b3a1-a564bb37b1f8"
 		fmt.Printf("--> Workflow Id: %s \n", workflows[w].ID)
-		var jobs []circleci.WorkflowItem = circleci.GetWorkflowJob(ci, workflows[w].ID, "none", "i.data", "i.token")
+		var jobs []circleci.WorkflowItem = circleci.GetWorkflowJob(ci, testWorkflowId, "json", "i.data", "i.token")
+
 		for j := range jobs {
+			jd := circleci.GetJobDetails(ci, strconv.Itoa(jobs[j].JobNumber), "gh", "Cloud", "janus-rails", "")
+			fmt.Println(jd.Parallelism)
 			fmt.Printf("-->> Checking %v %s status: %s \n", jobs[j].JobNumber, jobs[j].Name, jobs[j].Status)
 			// job loop
 			returnDataSet, returnEnvConfig, orbs, parameters = circleci.GetConfigWithWorkflow(ci, jobs, workflows, j, w, "data")

@@ -415,6 +415,65 @@ type listGetPipeline struct {
 	ContinuationToken string         `json:"next_page_token"`
 }
 
+type watcherCmd struct {
+	host           string
+	token          string
+	namespace      string
+	pipelineId     string
+	action         string
+	pipelineNumber string
+	createDate     string
+}
+
+func (cmd *watcherCmd) run(ci CI, org string, output string, maxPage int) (items []PipelineItem) {
+	continuation := ""
+	get := func() (listResp listGetPipeline, err error) {
+		url := fmt.Sprintf(restPipeline, org)
+
+		if continuation != "" {
+			url += "&page-token=" + continuation
+		}
+
+		url += "&mine=false"
+
+		body, resp, err := ci.Get(url)
+		if err != nil || resp.StatusCode != http.StatusOK {
+			fmt.Println(url)
+			fmt.Println(resp.Status)
+			return
+		}
+
+		err = json.Unmarshal(body, &listResp)
+		if err != nil {
+			fmt.Printf("could not read items from response: %v", err)
+		}
+
+		if output == "json" {
+			fmt.Printf(string(body) + "\n")
+		}
+
+		return
+	}
+
+	items = make([]PipelineItem, 0)
+	for i := 0; i < maxPage; i++ {
+		resp, err := get()
+		if err != nil {
+			return items
+		}
+
+		items = append(items, resp.Items...)
+
+		if resp.ContinuationToken == "" {
+			break
+		}
+
+		continuation = resp.ContinuationToken
+	}
+
+	return items
+}
+
 func GetPipeline(ci CI, org string, output string, page int) (items []PipelineItem) {
 	continuation := ""
 	get := func() (listResp listGetPipeline, err error) {
@@ -453,6 +512,7 @@ func GetPipeline(ci CI, org string, output string, page int) (items []PipelineIt
 		}
 
 		items = append(items, resp.Items...)
+
 		if resp.ContinuationToken == "" {
 			break
 		}

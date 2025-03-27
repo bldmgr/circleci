@@ -12,6 +12,8 @@ const (
 	restGetJobArtifacts = "api/v2/project/%s/%s/artifacts"
 	restGetTestMetadata = "api/v2/project/%s/%s/%s/%s/tests"
 	restGetJobData      = "api/v1.1/project/%s/%s/%s/%s/output/%s/0?file=true"
+	restGetProject      = "api/v1.1/project/github/Cloud/janus-rails/27993"
+	//https://$CIRCLE_HOSTNAME/api/v1.1/project/github/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/$build_num
 )
 
 type JobDetails struct {

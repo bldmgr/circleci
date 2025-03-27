@@ -8,6 +8,7 @@ import (
 
 const (
 	restWorkflowJob = "api/v2/workflow/%s/job"
+	restGetParallel = "api/v2/workflow/%s/job/%s/parallel-runs/1"
 )
 
 type listAssetsResponse struct {
@@ -24,6 +25,28 @@ type WorkflowItem struct {
 	Status      string `json:"status"`
 	Type        string `json:"type"`
 	StoppedAt   string `json:"stopped_at"`
+}
+
+func GetJobParallel(ci CI, jobId string, vsc string, namespace string, project string, output string) (items JobDetails) {
+	var p JobDetails
+	url := fmt.Sprintf(restGetParallel, "d0c7ccea-144a-411e-b505-359ebfb296ef", "21692")
+	body, resp, err := ci.Get(url)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return
+	}
+
+	err = json.Unmarshal(body, &p)
+	if err != nil {
+		fmt.Printf("could not read items from response: %v", err)
+	}
+
+	if output == "json" {
+		fmt.Println("GetJobParallel")
+		fmt.Printf(string(body) + "\n")
+		fmt.Println("GetJobParallel done")
+	}
+
+	return p
 }
 
 func GetWorkflowJob(ci CI, workflowId string, output string, data string, token string) (items []WorkflowItem) {
