@@ -622,14 +622,14 @@ func processParms(circleciConfig []byte, viperSub string) []ViperSub {
 
 				switch value.(type) {
 				case string:
-					viperItems = append(viperItems, ViperSub{
+					viperItems = appendUniqueViperSub(viperItems, ViperSub{
 						Name: key,
 						Type: value.(string),
 					})
 
 				case map[string]interface{}:
 					newVersion := fmt.Sprintf("%s@embedded", key)
-					viperItems = append(viperItems, ViperSub{
+					viperItems = appendUniqueViperSub(viperItems, ViperSub{
 						Name: newVersion,
 						Type: viperSub,
 					})
@@ -637,7 +637,7 @@ func processParms(circleciConfig []byte, viperSub string) []ViperSub {
 						if key2 == "orbs" {
 							for key3, rvalue2 := range rvalue.(map[string]interface{}) {
 								orbVersion := fmt.Sprintf("%s", rvalue2)
-								viperItems = append(viperItems, ViperSub{
+								viperItems = appendUniqueViperSub(viperItems, ViperSub{
 									Name: key3,
 									Type: orbVersion,
 								})
@@ -646,42 +646,12 @@ func processParms(circleciConfig []byte, viperSub string) []ViperSub {
 					}
 				}
 			}
-			fmt.Printf("done")
+		} else {
+			viperItems = appendUniqueViperSub(viperItems, ViperSub{
+				Name: keys[i],
+				Type: viperSub,
+			})
 		}
-
-		//	ak := f.AllKeys()
-		//	fmt.Println(ak)
-		//	for _, ak := range ak {
-		//		fmt.Println("Key: ", ak)
-		//		fmt.Println("Value: ", f.Get(ak))
-		//		fmt.Println("Type: ", f.Get(ak).(map[string]interface{})["version"])
-		//}
-		//data = viper.GetStringMap()
-		//switch v := data.(type) {
-		//case map[string]int:
-		//	fmt.Println("Type: map[string]int", v)
-		//	fmt.Println("Total Keys:", f.Get(keys[i]).(string))
-
-		//case map[string]string:
-		//	fmt.Println("Type: map[string]string", v)
-		//	fmt.Println("Total Keys:", f.Get(keys[i]).(string))
-
-		//case map[string]interface{}:
-		//	fmt.Println("Type: map[string]interface{}", v)
-		//	fmt.Println("Total Keys:", f.Get(keys[i]))
-		//	var orbVersion = ""
-		//	viperItems = append(viperItems, ViperSub{
-		//		Name: keys[i],
-		//		Type: orbVersion,
-		//	})
-		//}
-		//	}
-		//} else {
-		//viperItems = append(viperItems, ViperSub{
-		//Name: keys[i],
-		//Type: viperSub,
-		//})
-		//}
 	}
 
 	return viperItems
@@ -917,4 +887,17 @@ type AllData struct {
 type ViperSub struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
+}
+
+// appendUniqueViperSub adds a ViperSub item to the slice only if an item with the same Name doesn't already exist
+func appendUniqueViperSub(items []ViperSub, newItem ViperSub) []ViperSub {
+	// Check if item with same Name already exists
+	for _, item := range items {
+		if item.Name == newItem.Name {
+			return items // Item already exists, return unchanged slice
+		}
+	}
+
+	// Item doesn't exist, append it
+	return append(items, newItem)
 }
