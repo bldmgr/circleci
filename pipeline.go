@@ -636,9 +636,7 @@ func processParms(circleciConfig []byte, viperSub string) []ViperSub {
 					for key2, rvalue := range value.(map[string]interface{}) {
 						if key2 == "orbs" {
 							for key3, rvalue2 := range rvalue.(map[string]interface{}) {
-								fmt.Println("Orb:", key3)
-								fmt.Println("Version: ", rvalue2)
-								orbVersion := v.Get(key3).(string)
+								orbVersion := fmt.Sprintf("%s", rvalue2)
 								viperItems = append(viperItems, ViperSub{
 									Name: key3,
 									Type: orbVersion,
