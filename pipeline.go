@@ -592,6 +592,7 @@ func processWorkflows(jobName string) {
 }
 
 func processParms(circleciConfig []byte, viperSub string) []ViperSub {
+
 	viperItems := make([]ViperSub, 0)
 	viper.SetConfigType("yaml")
 	viper.ReadConfig(bytes.NewBuffer(circleciConfig))
@@ -615,17 +616,74 @@ func processParms(circleciConfig []byte, viperSub string) []ViperSub {
 				})
 			}
 		} else if viperSub == "orbs" {
-			var orbVersion = v.Get(keys[i]).(string)
-			viperItems = append(viperItems, ViperSub{
-				Name: keys[i],
-				Type: orbVersion,
-			})
-		} else {
-			viperItems = append(viperItems, ViperSub{
-				Name: keys[i],
-				Type: viperSub,
-			})
+			//var data interface{}
+			f := viper.Sub("orbs").AllSettings()
+			for key, value := range f {
+
+				switch value.(type) {
+				case string:
+					viperItems = append(viperItems, ViperSub{
+						Name: key,
+						Type: value.(string),
+					})
+
+				case map[string]interface{}:
+					newVersion := fmt.Sprintf("%s@embedded", key)
+					viperItems = append(viperItems, ViperSub{
+						Name: newVersion,
+						Type: viperSub,
+					})
+					for key2, rvalue := range value.(map[string]interface{}) {
+						if key2 == "orbs" {
+							for key3, rvalue2 := range rvalue.(map[string]interface{}) {
+								fmt.Println("Orb:", key3)
+								fmt.Println("Version: ", rvalue2)
+								orbVersion := v.Get(key3).(string)
+								viperItems = append(viperItems, ViperSub{
+									Name: key3,
+									Type: orbVersion,
+								})
+							}
+						}
+					}
+				}
+			}
+			fmt.Printf("done")
 		}
+
+		//	ak := f.AllKeys()
+		//	fmt.Println(ak)
+		//	for _, ak := range ak {
+		//		fmt.Println("Key: ", ak)
+		//		fmt.Println("Value: ", f.Get(ak))
+		//		fmt.Println("Type: ", f.Get(ak).(map[string]interface{})["version"])
+		//}
+		//data = viper.GetStringMap()
+		//switch v := data.(type) {
+		//case map[string]int:
+		//	fmt.Println("Type: map[string]int", v)
+		//	fmt.Println("Total Keys:", f.Get(keys[i]).(string))
+
+		//case map[string]string:
+		//	fmt.Println("Type: map[string]string", v)
+		//	fmt.Println("Total Keys:", f.Get(keys[i]).(string))
+
+		//case map[string]interface{}:
+		//	fmt.Println("Type: map[string]interface{}", v)
+		//	fmt.Println("Total Keys:", f.Get(keys[i]))
+		//	var orbVersion = ""
+		//	viperItems = append(viperItems, ViperSub{
+		//		Name: keys[i],
+		//		Type: orbVersion,
+		//	})
+		//}
+		//	}
+		//} else {
+		//viperItems = append(viperItems, ViperSub{
+		//Name: keys[i],
+		//Type: viperSub,
+		//})
+		//}
 	}
 
 	return viperItems
